@@ -2,26 +2,24 @@ package net.zioxs.replayfight.mixin;
 
 import com.replaymod.recording.ReplayModRecording;
 import net.minecraft.network.protocol.Packet;
-import net.minecraftforge.network.PacketDistributor;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.gen.Invoker;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import yesman.epicfight.network.EpicFightNetworkManager;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import yesman.epicfight.network.ManagedCustomPacketPayload;
 
-@Mixin(EpicFightNetworkManager.class)
+@Mixin(PacketDistributor.class)
 public abstract class EFNetworkManagerMixin {
 
-    @Invoker(value = "createVanillaPacket", remap = false)
-    private static Packet<?> callCreateVanillaPacket(Object message, PacketDistributor.PacketTarget packetTarget, Object[] messages) {
-        throw new AssertionError();
-    }
-
-    @Inject(method = "sendToClient(Ljava/lang/Object;Lnet/minecraftforge/network/PacketDistributor$PacketTarget;[Ljava/lang/Object;)V", at = @At("HEAD"), remap = false)
-    private static void sendToClient(Object message, PacketDistributor.PacketTarget packetTarget, Object[] messages, CallbackInfo ci) {
-        if (ReplayModRecording.instance.getConnectionEventHandler().getPacketListener() != null)
-            ReplayModRecording.instance.getConnectionEventHandler().getPacketListener().save(callCreateVanillaPacket(message, packetTarget, messages));
+    @Inject(method = "makeClientboundPacket", at = @At("RETURN"))
+    private static void makeClientboundPacket(CustomPacketPayload payload, CustomPacketPayload[] payloads, CallbackInfoReturnable<Packet<?>> cir) {
+        if (ReplayModRecording.instance.getConnectionEventHandler().getPacketListener() != null) {
+            if (payload.type().id().getNamespace().equals("epicfight")) {
+                ReplayModRecording.instance.getConnectionEventHandler().getPacketListener().save(cir.getReturnValue());
+            }
+        }
     }
 
 }
